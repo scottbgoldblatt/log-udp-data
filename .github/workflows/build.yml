@@ -4,40 +4,49 @@ on:
   workflow_dispatch:
   push:
     branches: ["main"]
+  pull_request:
 
 jobs:
   windows:
     runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      # Ensure MSVC environment (cl.exe) is active
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Put MSVC (cl.exe) on PATH for this job
       - name: MSVC Dev Cmd
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
 
-      # Get Ninja (optional; windows-latest often has it, but this guarantees it)
+      # Ensure Ninja is available
       - name: Install Ninja
-        run: choco install ninja -y
-
-      # Clone vcpkg at a known commit (match your builtin-baseline ideally)
-      # inside your windows job steps
-      - name: Clone vcpkg at pinned commit
         shell: pwsh
         run: |
-          git clone https://github.com/microsoft/vcpkg $env:GITHUB_WORKSPACE\vcpkg
-          cd $env:GITHUB_WORKSPACE\vcpkg
+          choco install ninja -y
+          ninja --version
+
+      # Clone vcpkg at the pinned commit and bootstrap it
+      - name: Clone + bootstrap vcpkg
+        shell: pwsh
+        run: |
+          git clone https://github.com/microsoft/vcpkg "$env:GITHUB_WORKSPACE\vcpkg"
+          cd "$env:GITHUB_WORKSPACE\vcpkg"
           git checkout c01dc6ea7353758f2ed70df0bc29c97dfc650b3a
           .\bootstrap-vcpkg.bat
+          .\vcpkg.exe version
 
-      - name: vcpkg install (manifest mode)
+      # Install explicit deps (Option 2) for the SAME triplet we will build with
+      - name: vcpkg install deps (x64-windows-static)
         shell: pwsh
         run: |
           $vcpkg = "$env:GITHUB_WORKSPACE\vcpkg\vcpkg.exe"
-          & $vcpkg install --triplet x64-windows-static --manifest
+          & $vcpkg install boost-system boost-asio --triplet x64-windows-static
+          & $vcpkg list
 
-      - name: Configure (MSVC + Ninja)
+      # Configure with Ninja + MSVC, using vcpkg toolchain and static triplet
+      - name: Configure (Release)
         shell: pwsh
         run: |
           cmake -S . -B build -G Ninja `
@@ -49,10 +58,24 @@ jobs:
 
       - name: Build
         shell: pwsh
-        run: cmake --build build --config Release -- -v
+        run: |
+          cmake --build build --config Release -- -v
 
-      - name: Upload exe
+      # Package into a zip with optional run_logger.bat if present
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item -Force "build\hrg_logger.exe" "dist\hrg_logger.exe"
+
+          if (Test-Path "run_logger.bat") {
+            Copy-Item -Force "run_logger.bat" "dist\run_logger.bat"
+          }
+
+          Compress-Archive -Path dist\* -DestinationPath "hrg_logger-windows.zip" -Force
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: hrg_logger-windows
-          path: build\hrg_logger.exe
+          path: hrg_logger-windows.zip

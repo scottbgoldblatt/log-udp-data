@@ -1,0 +1,71 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Check Windows C++ Toolchain",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/check-toolchain.ps1"
+      ],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "Bootstrap vcpkg & install deps",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/bootstrap-vcpkg.ps1"
+      ],
+      "presentation": { "reveal": "always", "panel": "shared" },
+      "dependsOn": ["Check Windows C++ Toolchain"]
+    },
+    {
+      "label": "CMake Configure (Debug)",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "-S",
+        "${workspaceFolder}",
+        "-B",
+        "${workspaceFolder}/build",
+        "-G",
+        "Ninja",
+        "-DCMAKE_BUILD_TYPE=Debug",
+        "-DCMAKE_TOOLCHAIN_FILE=${env:VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "-DVCPKG_TARGET_TRIPLET=x64-windows"
+      ],
+      "presentation": { "reveal": "always", "panel": "shared" },
+      "dependsOn": ["Bootstrap vcpkg & install deps"]
+    },
+    {
+      "label": "Build (ninja)",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--build", "${workspaceFolder}/build", "--", "-v"],
+      "presentation": { "reveal": "always", "panel": "shared" },
+      "dependsOn": ["CMake Configure (Debug)"]
+    },
+    {
+      "label": "Download prebuilt (recommended for non-devs)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "Write-Host 'Download URL or script to fetch artifact goes here'; exit 0"
+      ],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    }
+  ]
+}

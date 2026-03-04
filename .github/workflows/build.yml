@@ -68,8 +68,17 @@ jobs:
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Copy-Item -Force "build\hrg_logger.exe" "dist\hrg_logger.exe"
 
+            New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item -Force "build\udp_test.exe" "dist\udp_test.exe"
+
           if (Test-Path "run_logger.bat") {
             Copy-Item -Force "run_logger.bat" "dist\run_logger.bat"
+          }
+
+
+
+          if (Test-Path "run_udp_test_sender.bat") {
+            Copy-Item -Force "run_udp_test_sender.bat" "dist\run_udp_test_sender.bat"
           }
 
           Compress-Archive -Path dist\* -DestinationPath "hrg_logger-windows.zip" -Force

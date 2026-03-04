@@ -2,34 +2,7 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Check Windows C++ Toolchain",
-      "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/scripts/check-toolchain.ps1"
-      ],
-      "presentation": { "reveal": "always", "panel": "shared" }
-    },
-    {
-      "label": "Bootstrap vcpkg & install deps",
-      "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/scripts/bootstrap-vcpkg.ps1"
-      ],
-      "presentation": { "reveal": "always", "panel": "shared" },
-      "dependsOn": ["Check Windows C++ Toolchain"]
-    },
-    {
-      "label": "CMake Configure (Debug)",
+      "label": "CMake: Configure (Debug)",
       "type": "shell",
       "command": "cmake",
       "args": [
@@ -41,31 +14,39 @@
         "Ninja",
         "-DCMAKE_BUILD_TYPE=Debug",
         "-DCMAKE_TOOLCHAIN_FILE=${env:VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-        "-DVCPKG_TARGET_TRIPLET=x64-windows"
+        "-DVCPKG_TARGET_TRIPLET=${input:vcpkgTriplet}"
       ],
-      "presentation": { "reveal": "always", "panel": "shared" },
-      "dependsOn": ["Bootstrap vcpkg & install deps"]
+      "problemMatcher": []
     },
     {
-      "label": "Build (ninja)",
+      "label": "CMake: Build",
       "type": "shell",
       "command": "cmake",
-      "args": ["--build", "${workspaceFolder}/build", "--", "-v"],
-      "presentation": { "reveal": "always", "panel": "shared" },
-      "dependsOn": ["CMake Configure (Debug)"]
-    },
-    {
-      "label": "Download prebuilt (recommended for non-devs)",
-      "type": "shell",
-      "command": "powershell",
       "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-Command",
-        "Write-Host 'Download URL or script to fetch artifact goes here'; exit 0"
+        "--build",
+        "${workspaceFolder}/build",
+        "--config",
+        "Debug",
+        "--",
+        "-v"
       ],
-      "presentation": { "reveal": "always", "panel": "shared" }
+      "dependsOn": ["CMake: Configure (Debug)"],
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "vcpkgTriplet",
+      "type": "pickString",
+      "description": "Select vcpkg triplet for this machine",
+      "options": [
+        "arm64-osx",
+        "x64-osx",
+        "x64-linux",
+        "x64-windows",
+        "x64-windows-static"
+      ],
+      "default": "arm64-osx"
     }
   ]
 }

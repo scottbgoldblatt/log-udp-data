@@ -2,41 +2,32 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "CMake Debug (macOS - CodeLLDB)",
+      "name": "Debug (macOS - CodeLLDB)",
       "type": "lldb",
       "request": "launch",
       "program": "${command:cmake.launchTargetPath}",
-      "args": [],
+      "args": ["192.168.10.5", "25001"],
       "cwd": "${workspaceFolder}",
-      "stopOnEntry": false,
-      "osx": {
-        "type": "lldb"
-      }
+      "stopOnEntry": false
     },
     {
-      "name": "CMake Debug (Linux - GDB)",
+      "name": "Debug (Linux - GDB)",
       "type": "cppdbg",
       "request": "launch",
       "program": "${command:cmake.launchTargetPath}",
-      "args": [],
+      "args": ["192.168.10.5", "25001"],
       "cwd": "${workspaceFolder}",
       "stopAtEntry": false,
-      "MIMode": "gdb",
-      "linux": {
-        "MIMode": "gdb"
-      }
+      "MIMode": "gdb"
     },
     {
-      "name": "CMake Debug (Windows - MSVC)",
+      "name": "Debug (Windows - MSVC)",
       "type": "cppvsdbg",
       "request": "launch",
       "program": "${command:cmake.launchTargetPath}",
-      "args": [],
+      "args": ["192.168.10.5", "25001"],
       "cwd": "${workspaceFolder}",
-      "stopAtEntry": false,
-      "windows": {
-        "type": "cppvsdbg"
-      }
+      "stopAtEntry": false
     }
   ]
 }

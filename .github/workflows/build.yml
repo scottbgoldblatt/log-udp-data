@@ -32,7 +32,6 @@ jobs:
 
       # Setup vcpkg and install deps from vcpkg.json (manifest mode)
       - name: Setup vcpkg
-        uses: lukka/run-vcpkg@v11
         with:
           # This action caches vcpkg builds automatically for speed.
           vcpkgDirectory: ${{ github.workspace }}/vcpkg

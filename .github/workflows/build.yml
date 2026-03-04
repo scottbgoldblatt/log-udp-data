@@ -27,7 +27,7 @@ jobs:
         run: |
           git clone https://github.com/microsoft/vcpkg $env:GITHUB_WORKSPACE\vcpkg
           cd $env:GITHUB_WORKSPACE\vcpkg
-          git checkout <YOUR_VCPKG_COMMIT_HASH>
+          git checkout 5b1214315250939257ef5d62ecdcbca18cf4fb1c
           .\bootstrap-vcpkg.bat
 
       - name: vcpkg install (manifest)

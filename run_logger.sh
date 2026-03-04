@@ -1,62 +1,58 @@
 #!/usr/bin/env bash
 
-# ===== Default values =====
-DEFAULT_IP="192.168.10.5"
-DEFAULT_PORT="25001"
+IMU_IP="192.168.10.5"
+PORT="25001"
 
-echo
-echo "============================================"
-echo "IMU LOGGER LAUNCHER"
-echo "============================================"
-echo
-echo "Select logger type:"
-echo "  1 - Binary Logger (recommended)"
-echo "  2 - Text Logger"
-echo
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 
-read -p "Enter choice (1 or 2) [default 1]: " CHOICE
-if [ -z "$CHOICE" ]; then
-    CHOICE=1
+BIN_EXE=""
+TXT_EXE=""
+
+# Check current directory
+[ -f "./bin_logger" ] && BIN_EXE="./bin_logger"
+[ -f "./text_logger" ] && TXT_EXE="./text_logger"
+
+# Check build directory
+[ -f "./build/bin_logger" ] && [ -z "$BIN_EXE" ] && BIN_EXE="./build/bin_logger"
+[ -f "./build/text_logger" ] && [ -z "$TXT_EXE" ] && TXT_EXE="./build/text_logger"
+
+if [[ -z "$BIN_EXE" && -z "$TXT_EXE" ]]; then
+ echo "ERROR: No logger executables found."
+ echo "Checked:"
+ echo "  ."
+ echo "  ./build"
+ exit 1
 fi
 
-echo
-
-read -p "Enter IP address [default $DEFAULT_IP]: " BIND_IP
-if [ -z "$BIND_IP" ]; then
-    BIND_IP="$DEFAULT_IP"
-fi
-
-read -p "Enter port [default $DEFAULT_PORT]: " BIND_PORT
-if [ -z "$BIND_PORT" ]; then
-    BIND_PORT="$DEFAULT_PORT"
-fi
-
-echo
-echo "============================================"
-echo "Starting Logger"
-echo "IP   : $BIND_IP"
-echo "Port : $BIND_PORT"
-echo "============================================"
-echo
-
-if [ "$CHOICE" = "1" ]; then
-    if [ -f "./bin_logger" ]; then
-        ./bin_logger "$BIND_IP" "$BIND_PORT"
-    else
-        echo "ERROR: bin_logger not found in this folder."
-        exit 1
-    fi
-elif [ "$CHOICE" = "2" ]; then
-    if [ -f "./text_logger" ]; then
-        ./text_logger "$BIND_IP" "$BIND_PORT"
-    else
-        echo "ERROR: text_logger not found in this folder."
-        exit 1
-    fi
+# Detect if system owns IMU IP
+if ifconfig | grep -q "$IMU_IP"; then
+ BIND_IP="$IMU_IP"
 else
-    echo "Invalid choice."
-    exit 1
+ BIND_IP="0.0.0.0"
 fi
 
 echo
-echo "Program exited."
+echo "IMU LOGGER"
+echo
+
+[[ -n "$BIN_EXE" ]] && echo "1 - Binary Logger (recommended)"
+[[ -n "$TXT_EXE" ]] && echo "2 - Text Logger"
+echo
+
+read -p "Select logger [default 1]: " CHOICE
+[[ -z "$CHOICE" ]] && CHOICE=1
+
+if [[ "$CHOICE" == "1" ]]; then
+ EXE="$BIN_EXE"
+else
+ EXE="$TXT_EXE"
+fi
+
+echo
+echo "Starting $(basename "$EXE")"
+echo "IP   : $BIND_IP"
+echo "Port : $PORT"
+echo
+
+"$EXE" "$BIND_IP" "$PORT"

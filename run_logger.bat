@@ -1,54 +1,70 @@
 @echo off
-setlocal
+setlocal EnableExtensions EnableDelayedExpansion
 
-REM ===== Default network settings =====
-set DEFAULT_IP=192.168.10.5
-set DEFAULT_PORT=25001
+set IMU_IP=192.168.10.5
+set PORT=25001
+
+cd /d "%~dp0"
+
+REM =============================
+REM Find executables
+REM =============================
+
+set BIN_EXE=
+set TXT_EXE=
+
+if exist "bin_logger.exe" set BIN_EXE=bin_logger.exe
+if exist "text_logger.exe" set TXT_EXE=text_logger.exe
+
+if exist "build\bin_logger.exe" if "%BIN_EXE%"=="" set BIN_EXE=build\bin_logger.exe
+if exist "build\text_logger.exe" if "%TXT_EXE%"=="" set TXT_EXE=build\text_logger.exe
+
+if "%BIN_EXE%"=="" if "%TXT_EXE%"=="" (
+ echo ERROR: No logger executables found.
+ echo Checked:
+ echo   .
+ echo   .\build
+ pause
+ exit /b 1
+)
+
+REM =============================
+REM Detect correct IP
+REM =============================
+
+set BIND_IP=0.0.0.0
+
+for /f "tokens=*" %%A in ('ipconfig ^| find "%IMU_IP%"') do (
+ set BIND_IP=%IMU_IP%
+)
+
+REM =============================
+REM Ask user which logger
+REM =============================
 
 echo.
-echo ============================================
-echo IMU LOGGER LAUNCHER
-echo ============================================
-echo.
-echo Select logger type:
-echo.
-echo   1 - Binary Logger (recommended)
-echo   2 - Text Logger
+echo IMU LOGGER
 echo.
 
-set /p CHOICE=Enter choice (1 or 2): 
-
+if not "%BIN_EXE%"=="" echo 1 - Binary Logger (recommended)
+if not "%TXT_EXE%"=="" echo 2 - Text Logger
 echo.
-set /p BIND_IP=Enter IP address [default %DEFAULT_IP%]: 
-if "%BIND_IP%"=="" set BIND_IP=%DEFAULT_IP%
 
-set /p BIND_PORT=Enter port [default %DEFAULT_PORT%]: 
-if "%BIND_PORT%"=="" set BIND_PORT=%DEFAULT_PORT%
-
-echo.
-echo ============================================
-echo Starting Logger
-echo IP   : %BIND_IP%
-echo Port : %BIND_PORT%
-echo ============================================
-echo.
+set /p CHOICE=Select logger [default 1]: 
+if "%CHOICE%"=="" set CHOICE=1
 
 if "%CHOICE%"=="1" (
-    if exist "bin_logger.exe" (
-        bin_logger.exe %BIND_IP% %BIND_PORT%
-    ) else (
-        echo ERROR: bin_logger.exe not found
-    )
-) else if "%CHOICE%"=="2" (
-    if exist "text_logger.exe" (
-        text_logger.exe %BIND_IP% %BIND_PORT%
-    ) else (
-        echo ERROR: text_logger.exe not found
-    )
+ set EXE=%BIN_EXE%
 ) else (
-    echo Invalid choice.
+ set EXE=%TXT_EXE%
 )
 
 echo.
-echo Program exited.
+echo Starting %EXE%
+echo IP   : %BIND_IP%
+echo Port : %PORT%
+echo.
+
+"%EXE%" %BIND_IP% %PORT%
+
 pause

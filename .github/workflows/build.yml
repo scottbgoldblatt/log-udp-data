@@ -22,7 +22,8 @@ jobs:
         run: choco install ninja -y
 
       # Clone vcpkg at a known commit (match your builtin-baseline ideally)
-      - name: Clone vcpkg
+      # inside your windows job steps
+      - name: Clone vcpkg at pinned commit
         shell: pwsh
         run: |
           git clone https://github.com/microsoft/vcpkg $env:GITHUB_WORKSPACE\vcpkg
@@ -30,11 +31,11 @@ jobs:
           git checkout c01dc6ea7353758f2ed70df0bc29c97dfc650b3a
           .\bootstrap-vcpkg.bat
 
-      - name: vcpkg install (manifest)
+      - name: vcpkg install (manifest mode)
         shell: pwsh
         run: |
-          $env:VCPKG_ROOT = "$env:GITHUB_WORKSPACE\vcpkg"
-          & "$env:VCPKG_ROOT\vcpkg.exe" install --triplet x64-windows-static --manifest
+          $vcpkg = "$env:GITHUB_WORKSPACE\vcpkg\vcpkg.exe"
+          & $vcpkg install --triplet x64-windows-static --manifest
 
       - name: Configure (MSVC + Ninja)
         shell: pwsh

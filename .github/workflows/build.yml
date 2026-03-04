@@ -1,72 +1,35 @@
-name: Build (macOS + Windows)
+name: Build Windows
 
 on:
   workflow_dispatch:
   push:
     branches: ["main"]
-  pull_request:
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-latest
-            triplet: arm64-osx
-            exe: hrg_logger
-          - os: windows-latest
-            triplet: x64-windows-static
-            exe: hrg_logger.exe
-
-    runs-on: ${{ matrix.os }}
-
+  windows:
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Ninja (macOS)
-        if: runner.os == 'macOS'
-        run: brew install ninja
+      - uses: lukka/get-cmake@latest
 
-      - name: Setup vcpkg
-        uses: stefanzweifel/setup-vcpkg@v2
+      - name: Setup vcpkg (from cache, no packages yet)
+        uses: lukka/run-vcpkg@v11
         with:
-          vcpkgDirectory: ${{ github.workspace }}/_vcpkg
-
-      - name: Install deps (manifest)
-        shell: bash
-        run: |
-          "${{ github.workspace }}/_vcpkg/vcpkg" install --triplet ${{ matrix.triplet }} --manifest
+          vcpkgGitCommitId: 5b1214315250939257ef5d62ecdcbca18cf4fb1c
 
       - name: Configure
-        shell: bash
-        run: |
-          cmake -S . -B build -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/_vcpkg/scripts/buildsystems/vcpkg.cmake" \
-            -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }}
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake"
+          -DVCPKG_TARGET_TRIPLET=x64-windows-static
 
       - name: Build
-        shell: bash
-        run: |
-          cmake --build build --config Release -- -v
+        run: cmake --build build --config Release -- -v
 
-      - name: Package
-        shell: bash
-        run: |
-          mkdir -p dist
-          if [[ "${{ runner.os }}" == "Windows" ]]; then
-            cp "build/${{ matrix.exe }}" dist/
-            if [[ -f run_logger.bat ]]; then cp run_logger.bat dist/; fi
-            (cd dist && 7z a "../hrg_logger-${{ runner.os }}.zip" ./*)
-          else
-            cp "build/${{ matrix.exe }}" dist/
-            if [[ -f run_logger.sh ]]; then cp run_logger.sh dist/; fi
-            (cd dist && zip -r "../hrg_logger-${{ runner.os }}.zip" ./*)
-          fi
-
-      - name: Upload artifact
+      - name: Upload exe
         uses: actions/upload-artifact@v4
         with:
-          name: hrg_logger-${{ runner.os }}
-          path: hrg_logger-${{ runner.os }}.zip
+          name: hrg_logger-windows
+          path: build\hrg_logger.exe

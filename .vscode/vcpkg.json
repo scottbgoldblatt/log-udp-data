@@ -1,8 +1,7 @@
 {
-  "name": "hrg-logger",
+  "name": "log-udp-data",
   "version-string": "0.1.0",
-    "builtin-baseline": "4110d43398232f486c3fd0b74e2dc9e4ca5e2a59",
-
+  "builtin-baseline": "5b1214315250939257ef5d62ecdcbca18cf4fb1c",
   "dependencies": [
     "boost-asio",
     "boost-system"

@@ -1,0 +1,73 @@
+name: Build (macOS + Windows)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            triplet: arm64-osx
+            exe: hrg_logger
+          - os: windows-latest
+            triplet: x64-windows-static
+            exe: hrg_logger.exe
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Install Ninja (Windows has it often, mac may not)
+      - name: Install Ninja (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
+      # Setup vcpkg and install deps from vcpkg.json (manifest mode)
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          # This action caches vcpkg builds automatically for speed.
+          vcpkgDirectory: ${{ github.workspace }}/vcpkg
+          vcpkgJsonGlob: "**/vcpkg.json"
+
+      - name: Configure
+        shell: bash
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" \
+            -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }}
+
+      - name: Build
+        shell: bash
+        run: |
+          cmake --build build --config Release -- -v
+
+      - name: Package
+        shell: bash
+        run: |
+          mkdir -p dist
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            cp "build/${{ matrix.exe }}" dist/
+            # optional: include your run script if you keep it in repo
+            if [[ -f run_logger.bat ]]; then cp run_logger.bat dist/; fi
+            (cd dist && 7z a "../hrg_logger-${{ runner.os }}.zip" ./*)
+          else
+            cp "build/${{ matrix.exe }}" dist/
+            if [[ -f run_logger.sh ]]; then cp run_logger.sh dist/; fi
+            (cd dist && zip -r "../hrg_logger-${{ runner.os }}.zip" ./*)
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hrg_logger-${{ runner.os }}
+          path: hrg_logger-${{ runner.os }}.zip

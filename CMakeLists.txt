@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(hrg_logger LANGUAGES CXX)
+project(text_logger LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -9,8 +9,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # (asio itself is header-only; if you want a find_package for consistency)
 # find_package(boost_asio CONFIG REQUIRED)
-# target_link_libraries(hrg_logger PRIVATE Boost::asio)cmake_minimum_required(VERSION 3.20)
-project(hrg_logger LANGUAGES CXX)
+# target_link_libraries(text_logger PRIVATE Boost::asio)cmake_minimum_required(VERSION 3.20)
+project(text_logger LANGUAGES CXX)
 
 # -- C++ standard
 set(CMAKE_CXX_STANDARD 20)
@@ -35,20 +35,20 @@ find_package(boost_system CONFIG REQUIRED)
 
 # -- Create targets based on options
 if(BUILD_TEXT_LOGGER)
-  add_executable(hrg_logger ${TEXT_LOGGER_SRC})
-  target_compile_features(hrg_logger PRIVATE cxx_std_20)
-  target_link_libraries(hrg_logger PRIVATE Boost::system)
-  target_include_directories(hrg_logger PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}) # if you keep headers locally
+  add_executable(text_logger ${TEXT_LOGGER_SRC})
+  target_compile_features(text_logger PRIVATE cxx_std_20)
+  target_link_libraries(text_logger PRIVATE Boost::system)
+  target_include_directories(text_logger PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}) # if you keep headers locally
   # install
-  install(TARGETS hrg_logger RUNTIME DESTINATION bin)
+  install(TARGETS text_logger RUNTIME DESTINATION bin)
 endif()
 
 if(BUILD_BIN_LOGGER)
-  add_executable(hrg_bin_logger ${BIN_LOGGER_SRC})
-  target_compile_features(hrg_bin_logger PRIVATE cxx_std_20)
-  target_link_libraries(hrg_bin_logger PRIVATE Boost::system)
-  target_include_directories(hrg_bin_logger PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-  install(TARGETS hrg_bin_logger RUNTIME DESTINATION bin)
+  add_executable(bin_logger ${BIN_LOGGER_SRC})
+  target_compile_features(bin_logger PRIVATE cxx_std_20)
+  target_link_libraries(bin_logger PRIVATE Boost::system)
+  target_include_directories(bin_logger PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+  install(TARGETS bin_logger RUNTIME DESTINATION bin)
 endif()
 
 add_executable(udp_test udp_test_sender_boost.cpp)

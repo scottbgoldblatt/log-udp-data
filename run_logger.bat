@@ -1,41 +1,53 @@
 @echo off
-setlocal enabledelayedexpansion
+setlocal
 
-REM ===== Default values =====
+REM ===== Default network settings =====
 set DEFAULT_IP=192.168.10.5
 set DEFAULT_PORT=25001
 
-REM ===== Resolve IP =====
-if "%~1"=="" (
-    set BIND_IP=%DEFAULT_IP%
-) else (
-    set BIND_IP=%~1
-)
-
-REM ===== Resolve PORT =====
-if "%~2"=="" (
-    set BIND_PORT=%DEFAULT_PORT%
-) else (
-    set BIND_PORT=%~2
-)
-
-REM ===== Check executable exists =====
-if not exist "hrg_logger.exe" (
-    echo ERROR: hrg_logger.exe not found in this folder.
-    echo Make sure this .bat file is next to the executable.
-    pause
-    exit /b 1
-)
-
+echo.
 echo ============================================
-echo Starting hrg_logger
-echo Bind IP   : %BIND_IP%
-echo Bind Port : %BIND_PORT%
+echo IMU LOGGER LAUNCHER
+echo ============================================
+echo.
+echo Select logger type:
+echo.
+echo   1 - Binary Logger (recommended)
+echo   2 - Text Logger
+echo.
+
+set /p CHOICE=Enter choice (1 or 2): 
+
+echo.
+set /p BIND_IP=Enter IP address [default %DEFAULT_IP%]: 
+if "%BIND_IP%"=="" set BIND_IP=%DEFAULT_IP%
+
+set /p BIND_PORT=Enter port [default %DEFAULT_PORT%]: 
+if "%BIND_PORT%"=="" set BIND_PORT=%DEFAULT_PORT%
+
+echo.
+echo ============================================
+echo Starting Logger
+echo IP   : %BIND_IP%
+echo Port : %BIND_PORT%
 echo ============================================
 echo.
 
-REM Run the program
-hrg_logger.exe %BIND_IP% %BIND_PORT%
+if "%CHOICE%"=="1" (
+    if exist "bin_logger.exe" (
+        bin_logger.exe %BIND_IP% %BIND_PORT%
+    ) else (
+        echo ERROR: bin_logger.exe not found
+    )
+) else if "%CHOICE%"=="2" (
+    if exist "text_logger.exe" (
+        text_logger.exe %BIND_IP% %BIND_PORT%
+    ) else (
+        echo ERROR: text_logger.exe not found
+    )
+) else (
+    echo Invalid choice.
+)
 
 echo.
 echo Program exited.

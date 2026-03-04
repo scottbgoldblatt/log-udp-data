@@ -91,8 +91,7 @@ int main(int argc, char **argv)
         // Make output directory named with bind ip and port (sanitized)
         std::string ip_name = bind_ip;
         for (char &c : ip_name)
-            if (c == '.')
-                c = '_';
+            if (c == '.') c = '_';
         std::string outdir_name = "out_" + ip_name + "_" + std::to_string(port);
         fs::path outdir = fs::path(outdir_name);
         fs::create_directories(outdir);
@@ -117,8 +116,7 @@ int main(int argc, char **argv)
             std::size_t n = sock.receive_from(boost::asio::buffer(buf), sender, 0, ec);
             if (ec)
             {
-                if (g_stop)
-                    break;
+                if (g_stop) break;
                 std::cerr << "Receive error: " << ec.message() << "\n";
                 continue;
             }

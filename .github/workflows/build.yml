@@ -11,21 +11,43 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: lukka/get-cmake@latest
-
-      - name: Setup vcpkg (from cache, no packages yet)
-        uses: lukka/run-vcpkg@v11
+      # Ensure MSVC environment (cl.exe) is active
+      - name: MSVC Dev Cmd
+        uses: ilammy/msvc-dev-cmd@v1
         with:
-          vcpkgGitCommitId: 5b1214315250939257ef5d62ecdcbca18cf4fb1c
+          arch: x64
 
-      - name: Configure
-        run: >
-          cmake -S . -B build -G Ninja
-          -DCMAKE_BUILD_TYPE=Release
-          -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake"
-          -DVCPKG_TARGET_TRIPLET=x64-windows-static
+      # Get Ninja (optional; windows-latest often has it, but this guarantees it)
+      - name: Install Ninja
+        run: choco install ninja -y
+
+      # Clone vcpkg at a known commit (match your builtin-baseline ideally)
+      - name: Clone vcpkg
+        shell: pwsh
+        run: |
+          git clone https://github.com/microsoft/vcpkg $env:GITHUB_WORKSPACE\vcpkg
+          cd $env:GITHUB_WORKSPACE\vcpkg
+          git checkout <YOUR_VCPKG_COMMIT_HASH>
+          .\bootstrap-vcpkg.bat
+
+      - name: vcpkg install (manifest)
+        shell: pwsh
+        run: |
+          $env:VCPKG_ROOT = "$env:GITHUB_WORKSPACE\vcpkg"
+          & "$env:VCPKG_ROOT\vcpkg.exe" install --triplet x64-windows-static --manifest
+
+      - name: Configure (MSVC + Ninja)
+        shell: pwsh
+        run: |
+          cmake -S . -B build -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_TOOLCHAIN_FILE="$env:GITHUB_WORKSPACE\vcpkg\scripts\buildsystems\vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static `
+            -DCMAKE_C_COMPILER=cl `
+            -DCMAKE_CXX_COMPILER=cl
 
       - name: Build
+        shell: pwsh
         run: cmake --build build --config Release -- -v
 
       - name: Upload exe

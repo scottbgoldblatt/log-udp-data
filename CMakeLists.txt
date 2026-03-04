@@ -4,8 +4,12 @@ project(hrg_logger LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Prefer Boost's CMake package config (works great with vcpkg)
-find_package(Boost CONFIG REQUIRED COMPONENTS system)
-
 add_executable(hrg_logger main.cpp)
+
+# vcpkg installs component configs like boost_systemConfig.cmake
+find_package(boost_system CONFIG REQUIRED)
 target_link_libraries(hrg_logger PRIVATE Boost::system)
+
+# (asio itself is header-only; if you want a find_package for consistency)
+# find_package(boost_asio CONFIG REQUIRED)
+# target_link_libraries(hrg_logger PRIVATE Boost::asio)

@@ -11,6 +11,16 @@
 #include "imu_logger/packet.hpp"
 #include "args.hpp"
 
+static uint64_t unix_now_ns()
+{
+    using namespace std::chrono;
+    return (uint64_t)duration_cast<nanoseconds>(
+               system_clock::now().time_since_epoch())
+        .count();
+}
+
+uint64_t packet_count = 0;
+uint64_t last_print = unix_now_ns();
 // factories implemented in cpp files
 namespace imu_logger
 {
@@ -23,12 +33,6 @@ using boost::system::error_code;
 
 static volatile std::sig_atomic_t g_stop = 0;
 static void handle_sigint(int) { g_stop = 1; }
-
-static uint64_t unix_now_ns()
-{
-    using namespace std::chrono;
-    return (uint64_t)duration_cast<nanoseconds>(system_clock::now().time_since_epoch()).count();
-}
 
 int main(int argc, char **argv)
 {
@@ -145,6 +149,25 @@ int main(int argc, char **argv)
         meta.payload_len = static_cast<uint16_t>(n);
 
         writer->write_record(meta, buf.data(), n);
+
+        static bool first_packet = true;
+
+        if (first_packet)
+        {
+            std::cout << "First packet received from "
+                      << sender.address().to_string()
+                      << ":" << sender.port() << "\n";
+            first_packet = false;
+        }
+
+        packet_count++;
+
+        uint64_t now = unix_now_ns();
+        if (now - last_print > 1000000000ULL)
+        {
+            std::cout << "Packets received: " << packet_count << "\n";
+            last_print = now;
+        }
     }
 
     writer->close();

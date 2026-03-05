@@ -1,4 +1,10 @@
-// main.cpp
+// main.cpp  (Boost.Asio UDP text logger, Ctrl+C reliable on macOS/Linux/Windows)
+// Changes vs your version:
+//  - Make socket non-blocking so Ctrl+C can be noticed even when no packets arrive
+//  - Small sleep when no data (prevents busy-spin)
+//  - Cleaner scientific formatting once (fixed precision, consistent output)
+//  - Warn-throttle for wrong-size packets (optional but helpful)
+
 #include <boost/asio.hpp>
 #include <filesystem>
 #include <fstream>
@@ -8,6 +14,9 @@
 #include <cstdint>
 #include <cstring>
 #include <csignal>
+#include <chrono>
+#include <thread>
+#include <iomanip>
 
 namespace fs = std::filesystem;
 using boost::asio::ip::udp;
@@ -15,7 +24,6 @@ using boost::system::error_code;
 
 static inline uint64_t load_u64_be(const unsigned char *p)
 {
-    // interpret p[0] as MSB (network order)
     return (uint64_t(p[0]) << 56) | (uint64_t(p[1]) << 48) | (uint64_t(p[2]) << 40) | (uint64_t(p[3]) << 32) |
            (uint64_t(p[4]) << 24) | (uint64_t(p[5]) << 16) | (uint64_t(p[6]) << 8) | (uint64_t(p[7]) << 0);
 }
@@ -27,22 +35,21 @@ static inline double u64_to_double(uint64_t u)
     return d;
 }
 
-volatile std::sig_atomic_t g_stop = 0;
-void handle_sigint(int) { g_stop = 1; }
+static volatile std::sig_atomic_t g_stop = 0;
+static void handle_sigint(int) { g_stop = 1; }
 
 int main(int argc, char **argv)
 {
     if (argc < 3)
     {
-        std::cerr << "Usage: hrg_logger <local_bind_ip> <local_port>\n";
-        std::cerr << "Example: hrg_logger 192.168.10.5 25001\n";
+        std::cerr << "Usage: hrg_logger <local_bind_ip> <local_port>\n"
+                  << "Example: hrg_logger 0.0.0.0 25001\n";
         return 1;
     }
 
-    std::string bind_ip = argv[1];
-    std::string port_str = argv[2];
+    const std::string bind_ip = argv[1];
+    const std::string port_str = argv[2];
 
-    // Validate port number
     int port = 0;
     try
     {
@@ -59,7 +66,6 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    // Validate IP (IPv4 expected) using make_address_v4
     error_code ec;
     auto addr_v4 = boost::asio::ip::make_address_v4(bind_ip, ec);
     if (ec)
@@ -68,15 +74,14 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    const int numValuesPerMsg = 73;
-    const std::size_t BufLen = numValuesPerMsg * 8;
+    constexpr int numValuesPerMsg = 73;
+    constexpr std::size_t BufLen = numValuesPerMsg * 8;
 
     try
     {
         std::signal(SIGINT, handle_sigint);
 
         boost::asio::io_context io;
-
         udp::endpoint local_ep(addr_v4, static_cast<unsigned short>(port));
 
         udp::socket sock(io);
@@ -88,13 +93,15 @@ int main(int argc, char **argv)
             return 1;
         }
 
-        // Make output directory named with bind ip and port (sanitized)
+        // IMPORTANT: make receive interruptible (helps Ctrl+C on macOS)
+        sock.non_blocking(true);
+
+        // Output directory
         std::string ip_name = bind_ip;
         for (char &c : ip_name)
             if (c == '.')
                 c = '_';
-        std::string outdir_name = "out_" + ip_name + "_" + std::to_string(port);
-        fs::path outdir = fs::path(outdir_name);
+        fs::path outdir = fs::path("out_" + ip_name + "_" + std::to_string(port));
         fs::create_directories(outdir);
 
         std::ofstream out(outdir / "SensorData.txt", std::ios::app);
@@ -104,33 +111,54 @@ int main(int argc, char **argv)
             return 1;
         }
 
+        // Set consistent formatting once
+        out.setf(std::ios::scientific);
+        out << std::setprecision(12);
+
         std::vector<unsigned char> buf(BufLen);
         udp::endpoint sender;
 
-        std::cout << "Bound to " << bind_ip << ":" << port << " -- receiving UDP on that interface...\n";
+        std::cout << "Bound to " << bind_ip << ":" << port << " -- receiving UDP...\n";
         std::cout << "Logging to: " << (outdir / "SensorData.txt") << "\n";
         std::cout << "Press Ctrl+C to stop.\n";
 
+        int bad_size_count = 0;
+
         while (!g_stop)
         {
-            // This call blocks until a datagram arrives.
             std::size_t n = sock.receive_from(boost::asio::buffer(buf), sender, 0, ec);
+
+            if (ec == boost::asio::error::would_block || ec == boost::asio::error::try_again)
+            {
+                // No packet available right now; avoid busy loop, allow SIGINT to be processed.
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                continue;
+            }
+
             if (ec)
             {
                 if (g_stop)
                     break;
                 std::cerr << "Receive error: " << ec.message() << "\n";
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
                 continue;
             }
 
             if (n != BufLen)
             {
-                std::cerr << "Got " << n << " bytes from " << sender.address().to_string()
-                          << " (expected " << BufLen << "), dropping.\n";
+                // Throttle spam if a device is sending wrong-sized packets
+                if (bad_size_count < 10)
+                {
+                    std::cerr << "Got " << n << " bytes from " << sender.address().to_string()
+                              << " (expected " << BufLen << "), dropping.\n";
+                    if (bad_size_count == 9)
+                        std::cerr << "(Suppressing further wrong-size warnings...)\n";
+                }
+                bad_size_count++;
                 continue;
             }
 
-            std::array<double, 73> values{};
+            std::array<double, numValuesPerMsg> values{};
             for (int j = 0; j < numValuesPerMsg; ++j)
             {
                 const unsigned char *p = buf.data() + j * 8;
@@ -140,8 +168,11 @@ int main(int argc, char **argv)
 
             out << 0 << '\t';
             for (double d : values)
-                out << std::scientific << d << '\t';
-            out << "\n";
+                out << d << '\t';
+            out << '\n';
+
+            // Optional: flush periodically (safer, slower). Uncomment if desired.
+            // out.flush();
         }
 
         std::cout << "Shutting down, flushed output.\n";

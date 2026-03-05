@@ -21,6 +21,13 @@ target_include_directories(imu_logger PRIVATE
 
 target_link_libraries(imu_logger PRIVATE Boost::system)
 
+
+add_executable(udp_test
+  udp_test_sender_boost.cpp)
+
+target_link_libraries(udp_test PRIVATE Boost::system)
+
+
 # Put the binary in build/bin for convenience
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 foreach(OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES})

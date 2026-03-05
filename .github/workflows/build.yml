@@ -67,6 +67,9 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Copy-Item -Force "build\imu_logger.exe" "dist\imu_logger.exe"
+          Copy-Item -Force "build\udp_test.exe" "dist\udp_test.exe"
+
+
           Compress-Archive -Path dist\* -DestinationPath "hrg_logger-windows.zip" -Force
 
       - name: Upload artifact

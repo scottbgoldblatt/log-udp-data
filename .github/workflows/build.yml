@@ -69,6 +69,7 @@ jobs:
           Copy-Item -Force "build\text_logger.exe" "dist\text_logger.exe"
           Copy-Item -Force "build\udp_test.exe" "dist\udp_test.exe"
           Copy-Item -Force "build\bin_logger.exe" "dist\bin_logger.exe"
+          Copy-Item -Force "build\imu_logger.exe" "dist\imu_logger.exe"
 
 
           if (Test-Path "run_logger.bat") {
